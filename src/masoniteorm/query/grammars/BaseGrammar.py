@@ -4,6 +4,7 @@ from ...expressions.expressions import (
     SubGroupExpression,
     SubSelectExpression,
     SelectExpression,
+    BetweenExpression,
 )
 
 
@@ -514,7 +515,7 @@ class BaseGrammar:
                     keyword = ""
                 else:
                     keyword = " " + self.first_where_string()
-            elif where.keyword == "or":
+            elif hasattr(where, "keyword") and where.keyword == "or":
                 keyword = " " + self.or_where_string()
             else:
                 keyword = " " + self.additional_where_string()
@@ -545,9 +546,17 @@ class BaseGrammar:
             If it is a WHERE NULL, WHERE EXISTS, WHERE `col` = 'val' etc
             """
             if equality == "BETWEEN":
+                low = where.low
+                high = where.high
+                if qmark:
+                    self.add_binding(low)
+                    self.add_binding(high)
+                    low = "?"
+                    high = "?"
+
                 sql_string = self.between_string().format(
-                    low=self._compile_value(where.low),
-                    high=self._compile_value(where.high),
+                    low=self._compile_value(low),
+                    high=self._compile_value(high),
                     column=self._table_column_string(where.column),
                     keyword=keyword,
                 )
@@ -610,12 +619,19 @@ class BaseGrammar:
                             value=val, separator=","
                         )
                 query_value = query_value.rstrip(",").rstrip(", ") + ")"
+            elif value is True and value_type != "NOT NULL":
+                sql_string = self.get_true_column_string()
+                query_value = 1
+            elif value is False and value_type != "NOT NULL":
+                sql_string = self.get_false_column_string()
+                query_value = 0
             elif qmark and value_type != "column":
                 query_value = "'?'"
                 if (
                     value is not True
                     and value_type != "value_equals"
                     and value_type != "NULL"
+                    and value_type != "BETWEEN"
                 ):
                     self.add_binding(value)
             elif value_type == "value":
@@ -623,6 +639,7 @@ class BaseGrammar:
                     query_value = "'?'"
                 else:
                     query_value = self.value_string().format(value=value, separator="")
+
                 self.add_binding(value)
             elif value_type == "column":
                 query_value = self._table_column_string(column=value, separator="")
@@ -638,6 +655,12 @@ class BaseGrammar:
             loop_count += 1
 
         return sql
+
+    def get_true_column_string(self):
+        return "{keyword} {column} = '1'"
+
+    def get_false_column_string(self):
+        return "{keyword} {column} = '0'"
 
     def add_binding(self, binding):
         """Adds a binding to the bindings tuple.

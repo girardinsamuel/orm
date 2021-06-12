@@ -9,6 +9,9 @@ class PostgresPlatform(Platform):
         "tiny_integer",
         "small_integer",
         "medium_integer",
+        "inet",
+        "cidr",
+        "macaddr",
     ]
 
     type_map = {
@@ -32,6 +35,9 @@ class PostgresPlatform(Platform):
         "geometry": "GEOMETRY",
         "json": "JSON",
         "jsonb": "JSONB",
+        "inet": "INET",
+        "cidr": "CIDR",
+        "macaddr": "MACADDR",
         "long_text": "LONGTEXT",
         "point": "POINT",
         "time": "TIME",
@@ -279,6 +285,10 @@ class PostgresPlatform(Platform):
                     sql.append(
                         f"ALTER TABLE {self.wrap_table(table.name)} ADD CONSTRAINT {constraint.name} UNIQUE({','.join(constraint.columns)})"
                     )
+                elif constraint.constraint_type == "primary_key":
+                    sql.append(
+                        f"ALTER TABLE {self.wrap_table(table.name)} ADD CONSTRAINT {constraint.name} PRIMARY KEY ({','.join(constraint.columns)})"
+                    )
 
         return sql
 
@@ -382,11 +392,9 @@ class PostgresPlatform(Platform):
         return table
 
     def enable_foreign_key_constraints(self):
-        """Postgres does not allow a global way to enable foreign key constraints
-        """
+        """Postgres does not allow a global way to enable foreign key constraints"""
         return ""
 
     def disable_foreign_key_constraints(self):
-        """Postgres does not allow a global way to disable foreign key constraints
-        """
+        """Postgres does not allow a global way to disable foreign key constraints"""
         return ""

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, date as datetimedate, time as datetimetime
 
 from inflection import tableize
 import inspect
@@ -52,6 +52,9 @@ class JsonCast:
     """Casts a value to JSON"""
 
     def get(self, value):
+        if isinstance(value, dict):
+            return value
+
         return json.loads(value)
 
     def set(self, value):
@@ -115,9 +118,10 @@ class Model(TimeStampsMixin, ObservesEvents, metaclass=ModelMeta):
     Anytime one of these methods are called on the model it will actually be called on the query builder class.
     """
     __passthrough__ = [
-        "all",
         "add_select",
+        "all",
         "avg",
+        "between",
         "bulk_create",
         "chunk",
         "count",
@@ -126,17 +130,19 @@ class Model(TimeStampsMixin, ObservesEvents, metaclass=ModelMeta):
         "find_or_fail",
         "first_or_fail",
         "first",
+        "force_update",
         "get",
         "has",
+        "join_on",
         "join",
         "joins",
-        "join_on",
         "last",
         "limit",
         "max",
         "min",
-        "order_by",
+        "not_between",
         "or_where",
+        "order_by",
         "paginate",
         "select",
         "set_global_scope",
@@ -147,13 +153,15 @@ class Model(TimeStampsMixin, ObservesEvents, metaclass=ModelMeta):
         "to_sql",
         "truncate",
         "update",
-        "force_update",
         "when",
-        "where_has",
+        "where_between",
         "where_from_builder",
+        "where_has",
         "where_in",
         "where_like",
+        "where_not_between",
         "where_not_like",
+        "where_not_null",
         "where_null",
         "where_raw",
         "where",
@@ -718,11 +726,18 @@ class Model(TimeStampsMixin, ObservesEvents, metaclass=ModelMeta):
         import pendulum
 
         if not datetime:
-            return pendulum.now(self.__timezone__)
-
-        if isinstance(datetime, str):
+            return pendulum.now(tz=self.__timezone__)
+        elif isinstance(datetime, str):
             return pendulum.parse(datetime, tz=self.__timezone__)
-
+        elif isinstance(datetime, datetimedate):
+            return pendulum.datetime(
+                datetime.year, datetime.month, datetime.day, tz=self.__timezone__
+            )
+        elif isinstance(datetime, datetimetime):
+            return pendulum.parse(
+                f"{datetime.hour}:{datetime.minute}:{datetime.second}",
+                tz=self.__timezone__,
+            )
         return pendulum.instance(datetime, tz=self.__timezone__)
 
     def get_new_datetime_string(self, datetime=None):

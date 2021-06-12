@@ -537,13 +537,6 @@ class QueryBuilder(ObservesEvents):
         """
         operator, value = self._extract_operator_value(*args)
 
-        if value is None:
-            value = ""
-        elif value is True:
-            value = "1"
-        elif value is False:
-            value = "0"
-
         if inspect.isfunction(column):
             builder = column(self.new())
             self._wheres += (
@@ -551,6 +544,7 @@ class QueryBuilder(ObservesEvents):
             )
         elif isinstance(column, dict):
             for key, value in column.items():
+
                 self._wheres += ((QueryExpression(key, "=", value, "value")),)
         elif isinstance(value, QueryBuilder):
             self._wheres += (
@@ -731,6 +725,12 @@ class QueryBuilder(ObservesEvents):
         """
         self._wheres += (BetweenExpression(column, low, high),)
         return self
+
+    def where_between(self, *args, **kwargs):
+        return self.between(*args, **kwargs)
+
+    def where_not_between(self, *args, **kwargs):
+        return self.not_between(*args, **kwargs)
 
     def not_between(self, column: str, low: [str, int], high: [str, int]):
         """Specifies a where not between expression.
@@ -970,8 +970,7 @@ class QueryBuilder(ObservesEvents):
         return self
 
     def take(self, *args, **kwargs):
-        """Alias for limit method
-        """
+        """Alias for limit method"""
         return self.limit(*args, **kwargs)
 
     def limit(self, amount):
@@ -999,8 +998,7 @@ class QueryBuilder(ObservesEvents):
         return self
 
     def skip(self, *args, **kwargs):
-        """Alias for limit method
-        """
+        """Alias for limit method"""
         return self.offset(*args, **kwargs)
 
     def update(self, updates: dict, dry=False, force=False):
